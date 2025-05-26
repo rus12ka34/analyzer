@@ -4,7 +4,6 @@ import TSNE from 'tsne-js';
 import fs from 'fs';
 import { createCanvas } from 'canvas';
 import { AutoModel } from '@xenova/transformers';
-import ort from 'onnxruntime-node';
 import { PCA } from 'ml-pca';
 // import kmeans from 'ml-kmeans';
 
