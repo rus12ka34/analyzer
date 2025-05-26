@@ -1,0 +1,5 @@
+google-api-python-client
+sentence-transformers==2.2.2
+scikit-learn
+numpy
+torch
