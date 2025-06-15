@@ -22,6 +22,7 @@ function App() {
     setLoading(true);
     setClusters([]);
     setView([]);
+    
     try {
       const response = await fetch('http://localhost:4444/api/getClusters', {
         method: 'POST',
