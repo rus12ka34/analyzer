@@ -24,7 +24,7 @@ function App() {
     setView([]);
     
     try {
-      const response = await fetch('http://localhost:4444/api/getClusters', {
+      const response = await fetch('http://localhost:4444/api/getClustersPy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -87,20 +87,6 @@ function App() {
     setView([]);
     setMessages([{ text: 'Привет! Введите адрес видео, чтобы получить комментарии.', sender: 'bot' }]);
   };
-
-  // const hashCode = (str: any) => {
-  //   let hash = 0;
-  //   for (let i = 0; i < str.length; i++) {
-  //     hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  //   }
-  //   return hash;
-  // };
-
-  // const generateCoordinates = (text: any) => {
-  //   const x = Math.abs(hashCode(text)) % 100;
-  //   const y = Math.abs(hashCode(text.split('').reverse().join(''))) % 100;
-  //   return [x, y];
-  // };
 
   const gridSize = Math.ceil(Math.sqrt(clusters.length));
   const spacing = 100;
@@ -268,7 +254,7 @@ function App() {
                       data: data,
                       label: {
                         show: true,
-                        formatter: (param: any) => param.data.name,
+                        formatter: (param: any) => param.data.name.slice(0, 50),
                         position: 'top',
                         color: isDarkTheme ? '#fff' : '#000'
                       },

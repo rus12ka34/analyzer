@@ -5,14 +5,21 @@ from sklearn.metrics import silhouette_score
 from sklearn.cluster import DBSCAN
 from googleapiclient.discovery import build
 from collections import defaultdict
+import json
 import numpy as np
 import umap
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # === НАСТРОЙКИ ===
+
+VIDEO_ID = sys.argv[1]
+# VIDEO_ID = '8Fv6fJXjxao'      # ← Замени на нужный ID
+
 YOUTUBE_API_KEY = 'AIzaSyB2m6IUTzz94_tMFAuhOy-ZQUtknCfbLQM'  # ← Замени на свой ключ
-VIDEO_ID = 'nhfFgnUKK4I'               # ← Замени на нужный ID
 MAX_COMMENTS = 450
 PCA_DIM = 50
 EPS_GRID = np.linspace(0.2, 3.0, 30)
@@ -45,12 +52,7 @@ def get_youtube_comments(api_key, video_id, max_comments=100):
 
 # === Загрузка комментариев ===
 comments = get_youtube_comments(YOUTUBE_API_KEY, VIDEO_ID, MAX_COMMENTS)
-if not comments:
-    print("Комментарии не найдены.")
-    exit()
-
-# === Эмбеддинги + нормализация + PCA ===
-print("Генерация эмбеддингов и понижение размерности...")
+    
 model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 embeddings = model.encode(comments, show_progress_bar=True)
 normalized_embeddings = normalize(embeddings)
@@ -58,8 +60,6 @@ normalized_embeddings = normalize(embeddings)
 pca = PCA(n_components=PCA_DIM)
 reduced_embeddings = pca.fit_transform(normalized_embeddings)
 
-# === Подбор eps с фиксированным min_samples ===
-print(f"Поиск eps с min_samples={MIN_SAMPLES}, silhouette_score максимально близким к 0.5 (но не выше)...")
 best_score = -999
 best_eps = None
 best_labels = None
@@ -82,7 +82,6 @@ for eps in tqdm(EPS_GRID, desc="Перебор eps"):
             continue
 
 if best_labels is None:
-    print("❌ Не удалось найти подходящий eps, выбираем максимальный silhouette score без ограничения 0.5.")
     best_score = -1
     for eps in tqdm(EPS_GRID, desc="Перебор eps fallback"):
         db = DBSCAN(eps=eps, min_samples=MIN_SAMPLES, metric='euclidean')
@@ -100,59 +99,67 @@ if best_labels is None:
             except:
                 continue
 
-print(f"\n✅ Лучшие параметры:")
-print(f"  eps = {best_eps:.2f}")
-print(f"  min_samples = {MIN_SAMPLES}")
-print(f"  Silhouette Score = {best_score:.3f}")
 labels = best_labels
 
-# === Визуализация UMAP ===
-print("Выполняется визуализация через UMAP...")
 umap_reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
 embedding_2d = umap_reducer.fit_transform(reduced_embeddings)
 
-# === Построение графика кластеров ===
-plt.figure(figsize=(12, 8))
-unique_labels = set(labels)
-colors = plt.cm.tab20(np.linspace(0, 1, len(unique_labels)))
-
-for label, color in zip(unique_labels, colors):
-    idx = labels == label
-    label_name = f"Кластер {label}" if label != -1 else "Шум"
-    plt.scatter(
-        embedding_2d[idx, 0], embedding_2d[idx, 1],
-        label=label_name,
-        alpha=0.6,
-        s=40,
-        c=[color]
-    )
-
-plt.title("Кластеры комментариев (UMAP + DBSCAN)")
-plt.legend(loc='best', fontsize='small')
-plt.xlabel("UMAP-1")
-plt.ylabel("UMAP-2")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+# embedding_2d
 
 # === Вывод кластеров ===
 clusters = defaultdict(list)
 for comment, label in zip(comments, labels):
-    clusters[label].append(comment)
-
-print(clusters.items())
-
-# for label, cluster_comments in clusters.items():
-#     if label == -1:
-#         continue
-#     print(f"\nКластер {label} — {len(cluster_comments)} комментариев")
-#     for c in cluster_comments[:5]:
-#         print(f"  - {c}")
+    clusters[str(label)].append(comment)
 
 # === Статистика ===
-# total = len(comments)
-# outliers = len(clusters.get(-1, []))
-# n_clusters = len(set([l for l in labels if l != -1]))
-# print(f"\n📊 Кластеров найдено: {n_clusters}")
-# print(f"🧹 Выбросов: {outliers} из {total} ({outliers / total:.1%})")
-# print(f"📈 Лучший Silhouette Score: {best_score:.3f}")
+total = len(comments)
+outliers = len(clusters.get(-1, []))
+n_clusters = len(set([l for l in labels if l != -1]))
+
+# --- Обеспечиваем корректную кодировку stdout ---
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+# === Группировка по кластерам ===
+cluster_map = defaultdict(list)
+for idx, (comment, label) in enumerate(zip(comments, labels)):
+    if label != -1:
+        cluster_map[int(label)].append(comment)
+
+# === Кластеры в нужной структуре ===
+clusters_output = [
+    {
+        "cluster": cluster_id,
+        "elements": elements
+    }
+    for cluster_id, elements in cluster_map.items()
+]
+
+# === Нормализация координат embedding_2d ===
+embedding_min = embedding_2d.min(axis=0)
+embedding_max = embedding_2d.max(axis=0)
+embedding_range = embedding_max - embedding_min
+embedding_norm = (embedding_2d - embedding_min) / embedding_range
+
+# === Визуализация вида ===
+view_output = [
+    [float(embedding_norm[i][0]), float(embedding_norm[i][1]), comments[i]]
+    for i in range(len(comments))
+]
+# === Финальный результат ===
+result = {
+    "clusters": clusters_output,
+    "view": view_output
+}
+
+# === Преобразование numpy-типов ===
+def convert_numpy(obj):
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    elif isinstance(obj, (np.floating,)):
+        return float(obj)
+    elif isinstance(obj, (np.ndarray,)):
+        return obj.tolist()
+    return str(obj)
+
+# === Вывод JSON в stdout ===
+print(json.dumps(result, ensure_ascii=False, indent=2, default=convert_numpy))

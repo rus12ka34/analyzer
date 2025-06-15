@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { spawn } from 'child_process';
 // import pool from './db';
 import { fetchComments } from './getComments.js';
 import { getEmbeddings } from './getEmbeddings.js';
@@ -48,6 +49,19 @@ app.post('/api/getClusters', async (req, res) => {
 
   // console.log('clusters >>> ', clusters);
   res.json(clusters);
+});
+
+app.post('/api/getClustersPy', async (req, res) => {
+  const { id: videoId } = req.body;
+  const pythonProcess = spawn('python', ['./server/py/clustering.py', videoId]);
+
+  let dataOutput = null;
+  pythonProcess.stdout.on('data', (data) => {
+    if (!dataOutput) {
+      dataOutput = JSON.parse(data.toString());
+      res.json(dataOutput);
+    }
+  });
 });
 
 app.post('/api/items', async (req, res) => {
