@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { TextField } from '@consta/uikit/TextField';
 import { Text } from '@consta/uikit/Text';
@@ -18,7 +18,7 @@ function App() {
   const [history, setHistory] = useState([]);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  const fetchItems = async (id) => {
+  const fetchItems = async (id: any) => {
     setLoading(true);
     setClusters([]);
     setView([]);
@@ -38,7 +38,7 @@ function App() {
         ...prevMessages,
         { text: 'Комментарии успешно получены и кластеризованы.', sender: 'bot' }
       ]);
-      setHistory(prevHistory => [
+      setHistory((prevHistory: any): any => [
         ...prevHistory,
         { contentId, clusters: data.clusters, view: data.view }
       ]);
@@ -71,7 +71,7 @@ function App() {
     }
   };
 
-  const handleHistoryClick = (historyItem) => {
+  const handleHistoryClick = (historyItem: any) => {
     setContentId(historyItem.contentId);
     setClusters(historyItem.clusters);
     setView(historyItem.view);
@@ -88,26 +88,26 @@ function App() {
     setMessages([{ text: 'Привет! Введите адрес видео, чтобы получить комментарии.', sender: 'bot' }]);
   };
 
-  const hashCode = (str) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return hash;
-  };
+  // const hashCode = (str: any) => {
+  //   let hash = 0;
+  //   for (let i = 0; i < str.length; i++) {
+  //     hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  //   }
+  //   return hash;
+  // };
 
-  const generateCoordinates = (text) => {
-    const x = Math.abs(hashCode(text)) % 100;
-    const y = Math.abs(hashCode(text.split('').reverse().join(''))) % 100;
-    return [x, y];
-  };
+  // const generateCoordinates = (text: any) => {
+  //   const x = Math.abs(hashCode(text)) % 100;
+  //   const y = Math.abs(hashCode(text.split('').reverse().join(''))) % 100;
+  //   return [x, y];
+  // };
 
   const gridSize = Math.ceil(Math.sqrt(clusters.length));
   const spacing = 100;
   const startX = 50;
   const startY = 50;
 
-  const data = clusters.map((cluster, index) => {
+  const data = clusters.map((cluster: any, index) => {
     const row = Math.floor(index / gridSize);
     const col = index % gridSize;
     const x = startX + col * spacing;
@@ -146,7 +146,7 @@ function App() {
               onClick={clearHistory}
               style={{ marginBottom: '20px' }}
             />
-            {history.map((historyItem, index) => (
+            {history.map((historyItem: any, index: any) => (
               <div key={index} style={{ marginBottom: '10px', cursor: 'pointer', padding: '10px', borderRadius: '5px', backgroundColor: isDarkTheme ? '#333' : '#f0f0f0' }} onClick={() => handleHistoryClick(historyItem)}>
                 <Text>{historyItem.contentId}</Text>
               </div>
@@ -185,11 +185,11 @@ function App() {
             {!!clusters.length && (
               <div style={{ marginTop: '20px' }}>
                 <Text weight='bold'>Кластеры комментариев:</Text>
-                {clusters.map((cluster) => (
+                {clusters.map((cluster: any) => (
                   <div key={cluster.cluster} style={{ marginBottom: '20px' }}>
                     <Text weight='bold'>Кластер: {cluster.cluster}</Text>
                     <div style={{ marginLeft: '20px' }}>
-                      {cluster.elements.map((elem, index) => (
+                      {cluster.elements.map((elem: any, index: any) => (
                         <Text key={index}> - {elem}</Text>
                       ))}
                     </div>
@@ -221,9 +221,8 @@ function App() {
                   },
                   tooltip: {
                     trigger: "item",
-                    formatter: function (params) {
-                      const [x, y, title] = params.value;
-                      return `Текст: ${title}`;
+                    formatter: function (params: any) {
+                      return `Текст: ${params.value[2]}`;
                     }
                   },
                   series: [
@@ -269,7 +268,7 @@ function App() {
                       data: data,
                       label: {
                         show: true,
-                        formatter: (param) => param.data.name,
+                        formatter: (param: any) => param.data.name,
                         position: 'top',
                         color: isDarkTheme ? '#fff' : '#000'
                       },
@@ -296,7 +295,7 @@ function App() {
               <TextField
                 label="Введите адрес видео"
                 value={contentId}
-                onChange={(value) => {
+                onChange={(value: any) => {
                   setContentId(value);
                 }}
                 placeholder="Введите адрес видео..."
